@@ -1,0 +1,5 @@
+SPEC.md
+.DS_Store
+Thumbs.db
+.vscode/
+node_modules/
