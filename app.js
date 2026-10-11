@@ -70,14 +70,26 @@
     return loc;
   }
 
-  /** 손 흔드는 캐릭터 로딩 화면 (모양은 index.html의 #tpl-mascot) */
-  function loadingView(text) {
+  const CHEERS = [
+    '좋은 아침이에요! 오늘도 화이팅!',
+    '오늘 하루도 안전하게, 화이팅!',
+    '새로운 하루 시작! 힘내봐요!',
+    '오늘도 다 같이 으쌰으쌰!',
+    '좋은 하루 만들어봐요, 화이팅!'
+  ];
+
+  /**
+   * 손 흔드는 오리 로딩 화면 (모양은 index.html의 #tpl-mascot).
+   * cheer=true면 말풍선에 응원 멘트(점 애니메이션 없음), 아니면 "text..."
+   */
+  function loadingView(text, cheer) {
     const wrap = h('div', { class: 'loading' });
     const tpl = document.getElementById('tpl-mascot');
     if (tpl) {
       const m = tpl.content.cloneNode(true);
       const label = m.querySelector('.mascot-label');
-      if (label) label.textContent = text;
+      if (label) label.textContent = cheer ? CHEERS[Math.floor(Math.random() * CHEERS.length)] : text;
+      if (cheer) { const d = m.querySelector('.dots'); if (d) d.remove(); }
       wrap.append(m);
     } else {
       wrap.textContent = text + '…';
@@ -507,7 +519,7 @@
   async function openSetup() {
     S.view = 'setup';
     clearTimeout(S.pollTimer);
-    $('#app').replaceChildren(loadingView('세팅 불러오는 중'));
+    $('#app').replaceChildren(loadingView('', true));
     try {
       S.setup = await api('setupLoad');
       loadDraft();

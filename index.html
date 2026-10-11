@@ -6,14 +6,14 @@
   <meta name="theme-color" content="#1f6feb">
   <meta name="color-scheme" content="light dark">
   <title>인원이동 관리</title>
-  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
   <div id="banner" class="banner" hidden>연결 끊김 — 자동으로 다시 연결합니다</div>
   <main id="app">
     <div class="loading">
     <div class="mascot-wrap">
-      <div class="mascot-bubble">안녕하세요!</div>
+      <div class="mascot-bubble"><span class="mascot-label">불러오는 중</span><span class="dots"><i>.</i><i>.</i><i>.</i></span></div>
       <svg class="mascot" viewBox="0 0 120 124" aria-hidden="true">
         <ellipse class="m-shadow" cx="60" cy="114" rx="30" ry="5"/>
         <g class="m-body">
@@ -34,14 +34,13 @@
           </g>
         </g></g>
       </svg>
-      <div class="mascot-text"><span class="mascot-label">불러오는 중</span><span class="dots"><i>.</i><i>.</i><i>.</i></span></div>
     </div>
     </div>
   </main>
 
   <template id="tpl-mascot">
     <div class="mascot-wrap">
-      <div class="mascot-bubble">안녕하세요!</div>
+      <div class="mascot-bubble"><span class="mascot-label">불러오는 중</span><span class="dots"><i>.</i><i>.</i><i>.</i></span></div>
       <svg class="mascot" viewBox="0 0 120 124" aria-hidden="true">
         <ellipse class="m-shadow" cx="60" cy="114" rx="30" ry="5"/>
         <g class="m-body">
@@ -62,7 +61,6 @@
           </g>
         </g></g>
       </svg>
-      <div class="mascot-text"><span class="mascot-label">불러오는 중</span><span class="dots"><i>.</i><i>.</i><i>.</i></span></div>
     </div>
   </template>
 
@@ -71,7 +69,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="config.js?v=7"></script>
-  <script src="app.js?v=7"></script>
+  <script src="config.js?v=8"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>
