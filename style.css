@@ -300,7 +300,7 @@ body.sheet-open { overflow: hidden; }
 .room-preview { font-size: 13px; color: var(--muted); margin-bottom: 6px; overflow-wrap: anywhere; }
 .bottom-bar .btn { font-size: 18px; }
 
-/* ───── 로딩 캐릭터 (안전모 동글이) ───── */
+/* ───── 로딩 캐릭터 (멍한 아기 곰) ───── */
 .mascot-wrap { display: grid; justify-items: center; gap: 4px; padding-top: 24px; }
 .mascot { width: 140px; height: auto; overflow: visible; }
 .mascot-bubble {
@@ -319,16 +319,17 @@ body.sheet-open { overflow: hidden; }
 .dots i:nth-child(2) { animation-delay: .2s; }
 .dots i:nth-child(3) { animation-delay: .4s; }
 
-.m-skin { fill: #fff6e9; stroke: #3b2f2a; stroke-width: 3; }
-.m-helmet { fill: #ffcc33; stroke: #3b2f2a; stroke-width: 3; stroke-linejoin: round; }
-.m-ridge { stroke: #e0a800; stroke-width: 4; stroke-linecap: round; }
-.m-brim { fill: #ffb400; stroke: #3b2f2a; stroke-width: 3; }
+.m-skin { fill: #c98f5f; stroke: #3b2f2a; stroke-width: 3; }
 .m-eye { fill: #3b2f2a; transform-box: fill-box; transform-origin: center; animation: m-blink 3.6s infinite; }
-.m-blush { fill: #ff9fa8; opacity: .65; }
+.m-blush { fill: #ff8f9c; opacity: .55; }
+.m-ear { fill: #c98f5f; stroke: #3b2f2a; stroke-width: 3; }
+.m-ear-in { fill: #f2c9a5; }
+.m-muzzle { fill: #f4dcc2; stroke: #3b2f2a; stroke-width: 2.5; }
+.m-nose { fill: #3b2f2a; }
 .m-mouth-o { fill: #7a3b3b; stroke: #3b2f2a; stroke-width: 2.5; transform-box: fill-box; transform-origin: center; animation: m-gape 2.2s ease-in-out infinite; }
 .m-head { transform-box: view-box; transform-origin: 60px 100px; animation: m-tilt 4s ease-in-out infinite; }
 .m-mouth, .m-armline { fill: none; stroke: #3b2f2a; stroke-width: 3; stroke-linecap: round; }
-.m-hand { fill: #fff6e9; stroke: #3b2f2a; stroke-width: 3; }
+.m-hand { fill: #c98f5f; stroke: #3b2f2a; stroke-width: 3; }
 .m-shadow { fill: #000; opacity: .12; transform-box: fill-box; transform-origin: center; animation: m-shadow 1.2s ease-in-out infinite; }
 .m-body { transform-box: view-box; transform-origin: 60px 108px; animation: m-bounce 1.2s ease-in-out infinite; }
 .m-arm { transform-box: view-box; transform-origin: 90px 84px; animation: m-wave .6s ease-in-out infinite alternate; }
