@@ -70,6 +70,21 @@
     return loc;
   }
 
+  /** 손 흔드는 캐릭터 로딩 화면 (모양은 index.html의 #tpl-mascot) */
+  function loadingView(text) {
+    const wrap = h('div', { class: 'loading' });
+    const tpl = document.getElementById('tpl-mascot');
+    if (tpl) {
+      const m = tpl.content.cloneNode(true);
+      const label = m.querySelector('.mascot-label');
+      if (label) label.textContent = text;
+      wrap.append(m);
+    } else {
+      wrap.textContent = text + '…';
+    }
+    return wrap;
+  }
+
   // ───────────── API ─────────────
   class ApiError extends Error {
     constructor(code, message, data) { super(message); this.code = code; this.data = data; }
@@ -200,7 +215,7 @@
   // ───────────── 시작 · 갱신 ─────────────
   async function start() {
     S.view = 'loading';
-    $('#app').replaceChildren(h('div', { class: 'loading', text: '불러오는 중…' }));
+    $('#app').replaceChildren(loadingView('불러오는 중'));
     try {
       const st = await api('state');
       applyState(st);
@@ -492,7 +507,7 @@
   async function openSetup() {
     S.view = 'setup';
     clearTimeout(S.pollTimer);
-    $('#app').replaceChildren(h('div', { class: 'loading', text: '세팅 불러오는 중…' }));
+    $('#app').replaceChildren(loadingView('세팅 불러오는 중'));
     try {
       S.setup = await api('setupLoad');
       loadDraft();
