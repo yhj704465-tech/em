@@ -325,6 +325,8 @@ body.sheet-open { overflow: hidden; }
 .m-brim { fill: #ffb400; stroke: #3b2f2a; stroke-width: 3; }
 .m-eye { fill: #3b2f2a; transform-box: fill-box; transform-origin: center; animation: m-blink 3.6s infinite; }
 .m-blush { fill: #ff9fa8; opacity: .65; }
+.m-mouth-o { fill: #7a3b3b; stroke: #3b2f2a; stroke-width: 2.5; transform-box: fill-box; transform-origin: center; animation: m-gape 2.2s ease-in-out infinite; }
+.m-head { transform-box: view-box; transform-origin: 60px 100px; animation: m-tilt 4s ease-in-out infinite; }
 .m-mouth, .m-armline { fill: none; stroke: #3b2f2a; stroke-width: 3; stroke-linecap: round; }
 .m-hand { fill: #fff6e9; stroke: #3b2f2a; stroke-width: 3; }
 .m-shadow { fill: #000; opacity: .12; transform-box: fill-box; transform-origin: center; animation: m-shadow 1.2s ease-in-out infinite; }
@@ -336,8 +338,10 @@ body.sheet-open { overflow: hidden; }
 @keyframes m-wave { from { transform: rotate(-18deg); } to { transform: rotate(22deg); } }
 @keyframes m-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
 @keyframes m-pop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes m-gape { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(.8, .45); } }
+@keyframes m-tilt { 0%, 60%, 100% { transform: rotate(0); } 70%, 85% { transform: rotate(-8deg); } }
 @keyframes m-dot { 0%, 60%, 100% { opacity: .2; } 30% { opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .m-body, .m-arm, .m-eye, .m-shadow, .mascot-bubble, .dots i { animation: none; }
+  .m-body, .m-head, .m-mouth-o, .m-arm, .m-eye, .m-shadow, .mascot-bubble, .dots i { animation: none; }
 }
