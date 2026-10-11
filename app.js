@@ -393,6 +393,7 @@
     if (p.canLeave) actions.push(h('button', { class: 'btn danger', text: '조퇴/퇴근', onclick: () => doLeave(p) }));
     if (p.canNoshow) actions.push(h('button', { class: 'btn gray', text: '미출근', onclick: () => doNoshow(p) }));
     if (p.canChangeType) actions.push(h('button', { class: 'btn gray', text: '근태 변경 ▾', onclick: () => openChangeType(p) }));
+    if (p.canChangeType) actions.push(h('button', { class: 'btn gray', text: '명단에서 제외', onclick: () => deactivate(p.name, 'main') }));
     if (actions.length) body.push(h('hr'), h('div', { class: 'btn-grid' }, actions));
     const sub = `${p.type} · ${p.start}~${p.end}` + (p.lastMovedAt ? ` · 마지막 처리 ${p.lastMovedAt}` : '');
     openSheet(`${p.name} · 현재: ${curLabel(p)}`, sub, body);
@@ -630,12 +631,50 @@
   function pickType(name) {
     const p = S.setup.people.find((x) => x.name === name);
     const e = eff(p);
-    openSheet(`${name} · 근태`, null, typeButtons(S.setup.types, e.status, (t) => {
-      const patch = { status: t.name };
-      if (t.working) { patch.start = t.start || S.setup.defStart; patch.end = t.end || S.setup.defEnd; }
-      closeSheet();
-      setDraft(name, patch);
-    }));
+    openSheet(`${name} · 근태`, null, [
+      typeButtons(S.setup.types, e.status, (t) => {
+        const patch = { status: t.name };
+        if (t.working) { patch.start = t.start || S.setup.defStart; patch.end = t.end || S.setup.defEnd; }
+        closeSheet();
+        setDraft(name, patch);
+      }),
+      h('hr'),
+      p.deletable
+        ? [h('button', { class: 'btn danger wide', text: '인원 삭제 (잘못 추가됨)', onclick: () => deactivate(name, 'setup', true) }),
+          h('p', { class: 'muted small', text: '출근 기록이 없는 사람이라 시트에서 완전히 지웁니다.' })]
+        : [h('button', { class: 'btn gray wide', text: '명단에서 제외 (퇴사 · 더 이상 안 나옴)', onclick: () => deactivate(name, 'setup') }),
+          h('p', { class: 'muted small', text: '출근 기록이 있어 삭제 대신 제외합니다. 내일부터 세팅 목록에 나오지 않고, 다시 나오면 [+ 인원 추가]에 같은 이름을 넣으면 됩니다.' })]
+    ]);
+  }
+
+  async function deactivate(name, from, hard) {
+    const q = hard
+      ? `${name}님을 삭제할까요?
+
+인원 시트와 오늘 출근부에서 지워집니다.`
+      : `${name}님을 명단에서 제외할까요?
+
+앞으로 세팅 목록에 나오지 않습니다.
+(다시 나오면 [+ 인원 추가]로 같은 이름을 넣으면 됩니다)`;
+    if (!confirm(q)) return;
+    closeSheet();
+    try {
+      const r = await api('deactivate', { name, hard: !!hard });
+      applyState(r.state);
+      delete S.draft[name];
+      delete S.errors[name];
+      if (from === 'setup' || S.view === 'setup') {
+        S.setup = r.setup;
+        loadDraft();
+        saveDraft();
+        renderSetup();
+      } else {
+        renderMain();
+      }
+      toast(r.message, { ms: 5000 });
+    } catch (e) {
+      toast(e.message, { error: true, ms: 6000 });
+    }
   }
 
   function timeGrid(cur, after, cb) {

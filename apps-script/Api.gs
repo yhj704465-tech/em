@@ -38,6 +38,7 @@ function fail_(code, message, extra) {
 var WRITE_ACTIONS = {
   setupSave: apiSetupSave_,
   addPerson: apiAddPerson_,
+  deactivate: apiDeactivate_,
   move: apiMove_,
   leave: apiLeave_,
   noshow: apiNoshow_,
@@ -65,7 +66,7 @@ function handle_(req) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) throw apiErr_('BUSY', '다른 처리가 진행 중입니다. 잠시 후 다시 시도하세요.');
   try {
-    var c = loadCtx_(action === 'addPerson' || action === 'setupSave');
+    var c = loadCtx_(action === 'addPerson' || action === 'setupSave' || action === 'deactivate');
     var out = fn(c, req, op);
     flushAtt_(c);
     flushEvents_(c);
@@ -376,6 +377,7 @@ function buildSetup_(ctx) {
   var s = ctx.settings;
   var def = defaultType_(ctx);
   var sug = suggestions_(ctx);
+  var past = pastAttNames_(ctx);
   var names = {};
   ctx.people.list.forEach(function (p) { if (p.use) names[p.name] = true; });
   ctx.att.forEach(function (a) { names[a.name] = true; });
@@ -407,7 +409,8 @@ function buildSetup_(ctx) {
       room: room,
       placed: placed,
       loc: locLabel_(loc),
-      suggestedRoom: sug[name] ? sug[name].room : null
+      suggestedRoom: sug[name] ? sug[name].room : null,
+      deletable: !placed && !past[name]  // 지난 출근 기록·오늘 현장 기록이 없으면 완전 삭제 가능
     };
   });
   people.sort(function (x, y) {
@@ -519,6 +522,78 @@ function apiAddPerson_(ctx, req, op) {
   var out = buildSetup_(ctx);
   out.added = name;
   return out;
+}
+
+/** 오늘이 아닌 날짜의 출근부에 있는 이름들 (출근부 A:B 두 열만 읽음) */
+function pastAttNames_(ctx) {
+  if (ctx.pastNames) return ctx.pastNames;
+  var sh = sheet_(SH.ATT);
+  var last = sh.getLastRow();
+  var out = {};
+  if (last >= 2) {
+    sh.getRange(2, 1, last - 1, 2).getValues().forEach(function (r) {
+      var k = toKey_(r[0]), n = String(r[1]).trim();
+      if (n && k && k !== ctx.key) out[n] = true;
+    });
+  }
+  return (ctx.pastNames = out);
+}
+
+/**
+ * 인원 정리. req.hard
+ * - false: 명단에서 제외 (퇴사·장기 미출근) — 인원 시트 사용=FALSE, 메모에 기록.
+ *   오늘 현장 근무 기록이 없으면 오늘 출근부 행도 지워서 화면에서 바로 빠지게 한다
+ *   (단, 연차처럼 유급시간이 있는 쉬는 유형 행은 인건비 기록이라 남긴다).
+ * - true: 잘못 추가된 인원 완전 삭제 — 인원 시트 행과 오늘 출근부 행을 지운다.
+ *   지난 출근 기록이나 오늘 현장 기록이 있으면 NOT_DELETABLE (기록이 깨지지 않도록).
+ * 인원 시트에는 없고 오늘 출근부에만 있는 이름도 정리할 수 있다.
+ * 다시 나오면 [+ 인원 추가]에 같은 이름을 넣으면 된다.
+ */
+function apiDeactivate_(ctx, req, op) {
+  var name = String(req.name || '').trim();
+  var hard = !!req.hard;
+  var p = ctx.people.map[name];
+  var a = ctx.attBy[name];
+  if (!name || (!p && !a)) throw apiErr_('BAD_NAME', '인원 시트와 오늘 출근부에 없는 이름입니다: ' + name);
+  var evs = validFor_(ctx, name);
+  var placed = evs.some(isFieldEvent_);
+  var type = a ? ctx.types.map[a.status] : null;
+  var keepRow = !!a && (placed || (!hard && type && !type.working && type.paidHours > 0));
+
+  if (hard) {
+    if (placed) throw apiErr_('NOT_DELETABLE', '오늘 현장 기록이 있어 삭제할 수 없습니다. [명단에서 제외]를 사용하세요.');
+    if (p && pastAttNames_(ctx)[name]) throw apiErr_('NOT_DELETABLE', '지난 출근 기록이 있어 삭제할 수 없습니다. [명단에서 제외]를 사용하세요.');
+  } else if ((!p || !p.use) && (!a || keepRow)) {
+    throw apiErr_('BAD_STATE', name + '님은 이미 명단에서 제외되어 있습니다.');
+  }
+
+  var removedToday = false;
+  if (a && !keepRow) {
+    evs.forEach(function (e) { cancelEvent_(ctx, e, op); }); // 세팅배치·미출근만 남아 있음
+    sheet_(SH.ATT).deleteRow(a.row);
+    ctx.att = ctx.att.filter(function (x) { return x !== a; });
+    ctx.att.forEach(function (x) { if (x.row > a.row) x.row--; });
+    delete ctx.attBy[name];
+    removedToday = true;
+  }
+  var sh = p ? sheet_(SH.PEOPLE) : null;
+  if (p && hard) {
+    sh.deleteRow(p.row);
+    delete ctx.people.map[name];
+    ctx.people.list = ctx.people.list.filter(function (x) { return x !== p; });
+    ctx.people.list.forEach(function (x) { if (x.row > p.row) x.row--; });
+  } else if (p && p.use) {
+    var memoCell = sh.getRange(p.row, 4);
+    var memo = String(memoCell.getValue() || '');
+    var mark = '제외 ' + Utilities.formatDate(ctx.now, TZ, 'M/d HH:mm') + ' ' + op;
+    sh.getRange(p.row, 3).setValue(false);
+    memoCell.setValue(memo ? memo + ' / ' + mark : mark);
+    p.use = false;
+  }
+  var msg = hard ? name + '님을 삭제했습니다.'
+    : removedToday ? name + '님을 명단에서 제외했습니다.'
+    : name + '님을 명단에서 제외했습니다. 오늘 기록은 남기고 내일부터 빠집니다.';
+  return { ok: true, message: msg, removedToday: removedToday, setup: buildSetup_(ctx), state: buildState_(ctx) };
 }
 
 function apiMove_(ctx, req, op) {
