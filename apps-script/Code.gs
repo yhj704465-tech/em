@@ -348,13 +348,12 @@ function menuFixWorkTime() {
       var col = i + 1;
       sh.getRange(1, col).setValue(newName);
       if (sh.getLastRow() >= 2) {
-        var rng = sh.getRange(2, col, sh.getLastRow() - 1, 1);
-        var vals = rng.getValues();
-        vals.forEach(function (r) {
-          var v = typeof r[0] === 'string' && r[0].trim() !== '' && !isNaN(r[0]) ? Number(r[0]) : r[0];
-          if (typeof v === 'number' && v >= 1) { r[0] = dur_(v); total++; }
+        var x = readDurCol_(sh, col, sh.getLastRow() - 1);
+        x.vals.forEach(function (r) {
+          var d = minToDurOrNull_(r[0]);
+          if (d != null) { r[0] = d; total++; }
         });
-        rng.setValues(vals);
+        x.rng.setValues(x.vals);
       }
       col_(sh, col).setNumberFormat(FMT.DUR);
     });

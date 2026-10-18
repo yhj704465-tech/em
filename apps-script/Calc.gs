@@ -228,13 +228,16 @@ function replaceDateRows_(name, key, newRows, fmts) {
   var keep = [];
   var durCols = DUR_COLS[name] || [];
   if (last >= 2) {
+    // 시간 열은 표시형식 때문에 Date로 읽히지 않도록 일반 숫자 형식으로 바꾼 뒤 읽는다
+    durCols.forEach(function (c) { sh.getRange(2, c, last - 1, 1).setNumberFormat(FMT.PLAIN); });
     keep = sh.getRange(2, 1, last - 1, w).getValues().filter(function (r) {
       return toKey_(r[0]) !== key && r.join('') !== '';
     });
     // 예전 분 단위 숫자(예: 80) → 시간 값. 한 행의 시간이 24시간 이상일 수 없으므로 1 이상이면 분으로 본다
     keep.forEach(function (r) {
       durCols.forEach(function (c) {
-        if (typeof r[c - 1] === 'number' && r[c - 1] >= 1) r[c - 1] = dur_(r[c - 1]);
+        var d = minToDurOrNull_(r[c - 1]);
+        if (d != null) r[c - 1] = d;
       });
     });
   }

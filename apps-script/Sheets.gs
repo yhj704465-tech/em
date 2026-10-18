@@ -42,7 +42,7 @@ DUR_COLS[SH.DAILY] = [6];
 DUR_COLS[SH.DAILY_ATT] = [10, 11];
 DUR_COLS[SH.DAILY_ROOM] = [4];
 
-var FMT = { D: 'yyyy-mm-dd', T: 'hh:mm', DT: 'yyyy-mm-dd hh:mm:ss', N: '#,##0', DUR: '[h]"시간"mm"분"' };
+var FMT = { D: 'yyyy-mm-dd', T: 'hh:mm', DT: 'yyyy-mm-dd hh:mm:ss', N: '#,##0', DUR: '[h]"시간"mm"분"', PLAIN: '0.##########' };
 
 /** 분 → 시간 열에 넣을 값 (일 단위) */
 function dur_(min) {
@@ -50,8 +50,25 @@ function dur_(min) {
 }
 
 /**
- * 시간 열에 예전 분 단위 숫자(예: 80)가 남아 있으면 시간 값(80/1440)으로 바꾼다.
- * 한 행의 시간이 24시간 이상일 수 없으므로 1 이상인 숫자만 분으로 본다. 바꾼 칸 수를 돌려준다.
+ * 시간 열의 값을 숫자로 읽는다.
+ * 시간 표시형식이 걸린 칸은 getValues()가 숫자 대신 Date를 돌려주므로,
+ * 읽기 전에 일반 숫자 형식으로 바꾼다 (호출한 쪽에서 나중에 FMT.DUR을 다시 적용).
+ */
+function readDurCol_(sh, col, n) {
+  var rng = sh.getRange(2, col, n, 1);
+  rng.setNumberFormat(FMT.PLAIN);
+  return { rng: rng, vals: rng.getValues() };
+}
+
+/** 예전 분 단위 숫자(1 이상)면 시간 값으로 바꾼 값을, 아니면 null (한 행이 24시간 이상일 수 없음) */
+function minToDurOrNull_(v) {
+  if (typeof v === 'string' && v.trim() !== '' && !isNaN(v)) v = Number(v);
+  return typeof v === 'number' && v >= 1 ? dur_(v) : null;
+}
+
+/**
+ * 시간 열에 예전 분 단위 숫자(예: 80)가 남아 있으면 시간 값(80/1440)으로 바꾸고
+ * 시간 표시형식을 다시 적용한다. 바꾼 칸 수를 돌려준다.
  */
 function migrateDurCols_(name, sh) {
   var cols = DUR_COLS[name] || [];
@@ -59,13 +76,15 @@ function migrateDurCols_(name, sh) {
   var changed = 0;
   if (last < 2) return 0;
   cols.forEach(function (c) {
-    var rng = sh.getRange(2, c, last - 1, 1);
-    var vals = rng.getValues();
+    var x = readDurCol_(sh, c, last - 1);
     var n = 0;
-    vals.forEach(function (r) {
-      if (typeof r[0] === 'number' && r[0] >= 1) { r[0] = dur_(r[0]); n++; }
+    x.vals.forEach(function (r) {
+      var d = minToDurOrNull_(r[0]);
+      if (d != null) { r[0] = d; n++; }
     });
-    if (n) { rng.setValues(vals); changed += n; }
+    if (n) x.rng.setValues(x.vals);
+    x.rng.setNumberFormat(FMT.DUR);
+    changed += n;
   });
   return changed;
 }
