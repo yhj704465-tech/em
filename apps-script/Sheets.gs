@@ -50,14 +50,28 @@ function dur_(min) {
 }
 
 /**
- * 시간 열의 값을 숫자로 읽는다.
- * 시간 표시형식이 걸린 칸은 getValues()가 숫자 대신 Date를 돌려주므로,
- * 읽기 전에 일반 숫자 형식으로 바꾼다 (호출한 쪽에서 나중에 FMT.DUR을 다시 적용).
+ * 시간 열의 값을 "일" 단위 숫자로 읽는다.
+ * 시간 표시형식이 걸린 칸은 getValues()가 숫자 대신 Date를 돌려주므로
+ * 화면에 보이는 글자(예: "11520시간00분", "8시간00분", "480")를 해석해서 숫자로 만든다.
  */
 function readDurCol_(sh, col, n) {
   var rng = sh.getRange(2, col, n, 1);
-  rng.setNumberFormat(FMT.PLAIN);
-  return { rng: rng, vals: rng.getValues() };
+  var raw = rng.getValues(), disp = rng.getDisplayValues();
+  var vals = raw.map(function (r, i) {
+    var d = String(disp[i][0]).replace(/,/g, '').trim();
+    var m = d.match(/^(\d+)\s*시간\s*(\d+)\s*분/);
+    if (m) return [(+m[1] + +m[2] / 60) / 24];
+    if (d !== '' && !isNaN(d)) return [Number(d)];
+    var v = r[0];
+    if (v instanceof Date) return [(v.getTime() - SHEETS_EPOCH_MS_()) / 86400000];
+    return [v];
+  });
+  return { rng: rng, vals: vals };
+}
+
+/** 스프레드시트 날짜 0 (1899-12-30 00:00, 시트 시간대) */
+function SHEETS_EPOCH_MS_() {
+  return Utilities.parseDate('1899-12-30 00:00', TZ, 'yyyy-MM-dd HH:mm').getTime();
 }
 
 /** 예전 분 단위 숫자(1 이상)면 시간 값으로 바꾼 값을, 아니면 null (한 행이 24시간 이상일 수 없음) */
@@ -82,7 +96,10 @@ function migrateDurCols_(name, sh) {
       var d = minToDurOrNull_(r[0]);
       if (d != null) { r[0] = d; n++; }
     });
-    if (n) x.rng.setValues(x.vals);
+    if (n) {
+      x.rng.setNumberFormat(FMT.PLAIN);
+      x.rng.setValues(x.vals);
+    }
     x.rng.setNumberFormat(FMT.DUR);
     changed += n;
   });

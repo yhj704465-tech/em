@@ -353,9 +353,11 @@ function menuFixWorkTime() {
           var d = minToDurOrNull_(r[0]);
           if (d != null) { r[0] = d; total++; }
         });
+        x.rng.setNumberFormat(FMT.PLAIN);
         x.rng.setValues(x.vals);
       }
       col_(sh, col).setNumberFormat(FMT.DUR);
+      SpreadsheetApp.flush();
     });
     lines.push(sheetName + ': ' + total + '칸 변환');
   });

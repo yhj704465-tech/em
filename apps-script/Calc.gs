@@ -228,9 +228,12 @@ function replaceDateRows_(name, key, newRows, fmts) {
   var keep = [];
   var durCols = DUR_COLS[name] || [];
   if (last >= 2) {
-    // 시간 열은 표시형식 때문에 Date로 읽히지 않도록 일반 숫자 형식으로 바꾼 뒤 읽는다
-    durCols.forEach(function (c) { sh.getRange(2, c, last - 1, 1).setNumberFormat(FMT.PLAIN); });
-    keep = sh.getRange(2, 1, last - 1, w).getValues().filter(function (r) {
+    // 시간 열은 표시형식 때문에 Date로 읽히므로 화면 글자를 해석한 숫자로 바꿔 끼운다
+    var durVals = {};
+    durCols.forEach(function (c) { durVals[c] = readDurCol_(sh, c, last - 1).vals; });
+    var all0 = sh.getRange(2, 1, last - 1, w).getValues();
+    all0.forEach(function (r, i) { durCols.forEach(function (c) { r[c - 1] = durVals[c][i][0]; }); });
+    keep = all0.filter(function (r) {
       return toKey_(r[0]) !== key && r.join('') !== '';
     });
     // 예전 분 단위 숫자(예: 80) → 시간 값. 한 행의 시간이 24시간 이상일 수 없으므로 1 이상이면 분으로 본다
@@ -246,6 +249,7 @@ function replaceDateRows_(name, key, newRows, fmts) {
     .sort(function (a, b) { return a.k < b.k ? -1 : a.k > b.k ? 1 : a.i - b.i; })
     .map(function (x) { return x.r; });
   if (last >= 2) sh.getRange(2, 1, last - 1, w).clearContent();
+  durCols.forEach(function (c) { sh.getRange(2, c, Math.max(1, sh.getMaxRows() - 1), 1).setNumberFormat(FMT.PLAIN); });
   if (!all.length) return;
   var need = all.length + 1 - sh.getMaxRows();
   if (need > 0) sh.insertRowsAfter(sh.getMaxRows(), need + 200);
