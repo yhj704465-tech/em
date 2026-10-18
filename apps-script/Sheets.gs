@@ -49,6 +49,27 @@ function dur_(min) {
   return min / 1440;
 }
 
+/**
+ * 시간 열에 예전 분 단위 숫자(예: 80)가 남아 있으면 시간 값(80/1440)으로 바꾼다.
+ * 한 행의 시간이 24시간 이상일 수 없으므로 1 이상인 숫자만 분으로 본다. 바꾼 칸 수를 돌려준다.
+ */
+function migrateDurCols_(name, sh) {
+  var cols = DUR_COLS[name] || [];
+  var last = sh.getLastRow();
+  var changed = 0;
+  if (last < 2) return 0;
+  cols.forEach(function (c) {
+    var rng = sh.getRange(2, c, last - 1, 1);
+    var vals = rng.getValues();
+    var n = 0;
+    vals.forEach(function (r) {
+      if (typeof r[0] === 'number' && r[0] >= 1) { r[0] = dur_(r[0]); n++; }
+    });
+    if (n) { rng.setValues(vals); changed += n; }
+  });
+  return changed;
+}
+
 /** 특수 위치값 (실제 방이 아님) */
 var LOC = { UNPLACED: '미배치', LEFT: '@퇴근', NOSHOW: '@미출근' };
 

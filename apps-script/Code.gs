@@ -85,8 +85,8 @@ function ensureSheet_(name, created, seed) {
     created.push(name);
     sh.getRange(1, 1, 1, head.length).setValues([head]);
     if (seed) seed(sh);
-  } else if (sh.getRange(1, 1).getValue() === '') {
-    sh.getRange(1, 1, 1, head.length).setValues([head]);
+  } else if (sh.getRange(1, 1).getValue() === '' || DUR_COLS[name]) {
+    sh.getRange(1, 1, 1, head.length).setValues([head]); // 집계 시트는 열 이름 변경(작업분→작업시간) 반영
   }
   sh.getRange(1, 1, 1, head.length).setFontWeight('bold').setBackground('#e8eaed');
   sh.setFrozenRows(1);
@@ -171,18 +171,21 @@ function applyFormats_(name, sh) {
       }
       break;
     case SH.DAILY:
+      migrateDurCols_(name, sh);
       col_(sh, 1).setNumberFormat(FMT.D);
       col_(sh, 6).setNumberFormat(FMT.DUR);
       [7, 8].forEach(function (c) { col_(sh, c).setNumberFormat(FMT.N); });
       col_(sh, 9).setNumberFormat(FMT.DT);
       break;
     case SH.DAILY_ATT:
+      migrateDurCols_(name, sh);
       col_(sh, 1).setNumberFormat(FMT.D);
       [6, 7, 8, 9].forEach(function (c) { col_(sh, c).setNumberFormat(FMT.T); });
       [10, 11].forEach(function (c) { col_(sh, c).setNumberFormat(FMT.DUR); });
       col_(sh, 12).setNumberFormat(FMT.N);
       break;
     case SH.DAILY_ROOM:
+      migrateDurCols_(name, sh);
       col_(sh, 1).setNumberFormat(FMT.D);
       col_(sh, 3).setNumberFormat(FMT.N);
       col_(sh, 4).setNumberFormat(FMT.DUR);
