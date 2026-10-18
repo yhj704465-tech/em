@@ -62,6 +62,7 @@ function menuInit() {
   ensureSheet_(SH.LOG, created);
   ensureSheet_(SH.DAILY, created);
   ensureSheet_(SH.DAILY_ATT, created);
+  ensureSheet_(SH.DAILY_ROOM, created);
 
   // 새 파일의 빈 기본 시트 정리
   ['시트1', 'Sheet1'].forEach(function (n) {
@@ -171,13 +172,22 @@ function applyFormats_(name, sh) {
       break;
     case SH.DAILY:
       col_(sh, 1).setNumberFormat(FMT.D);
-      [6, 7, 8].forEach(function (c) { col_(sh, c).setNumberFormat(FMT.N); });
+      col_(sh, 6).setNumberFormat(FMT.DUR);
+      [7, 8].forEach(function (c) { col_(sh, c).setNumberFormat(FMT.N); });
       col_(sh, 9).setNumberFormat(FMT.DT);
       break;
     case SH.DAILY_ATT:
       col_(sh, 1).setNumberFormat(FMT.D);
       [6, 7, 8, 9].forEach(function (c) { col_(sh, c).setNumberFormat(FMT.T); });
-      [10, 11, 12].forEach(function (c) { col_(sh, c).setNumberFormat(FMT.N); });
+      [10, 11].forEach(function (c) { col_(sh, c).setNumberFormat(FMT.DUR); });
+      col_(sh, 12).setNumberFormat(FMT.N);
+      break;
+    case SH.DAILY_ROOM:
+      col_(sh, 1).setNumberFormat(FMT.D);
+      col_(sh, 3).setNumberFormat(FMT.N);
+      col_(sh, 4).setNumberFormat(FMT.DUR);
+      col_(sh, 5).setNumberFormat(FMT.N);
+      col_(sh, 6).setNumberFormat(FMT.DT);
       break;
   }
 }
@@ -224,7 +234,7 @@ function showAggResult_(key) {
   lock.waitLock(30000);
   try {
     var r = aggregateDate_(key);
-    var msg = key + ' 집계 완료\n일별집계 ' + r.daily + '행 · 일별근태 ' + r.att + '행';
+    var msg = key + ' 집계 완료\n일별집계 ' + r.daily + '행 · 일별근태 ' + r.att + '행 · 일별방집계 ' + r.room + '행';
     if (r.warnings.length) msg += '\n\n⚠️ 경고 ' + r.warnings.length + '건\n' + r.warnings.slice(0, 20).join('\n');
     SpreadsheetApp.getUi().alert(msg);
   } finally {

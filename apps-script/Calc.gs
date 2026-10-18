@@ -158,7 +158,7 @@ function computeDay_(d) {
   return { persons: persons, warnings: warnings };
 }
 
-/** 날짜 key의 일별집계·일별근태를 다시 만든다. 반환 { daily, att, warnings } */
+/** 날짜 key의 일별집계·일별근태·일별방집계를 다시 만든다. 반환 { daily, att, room, warnings } */
 function aggregateDate_(key) {
   var now = new Date();
   var day = dayStart_(key);
@@ -174,39 +174,68 @@ function aggregateDate_(key) {
     nowMin: isToday ? (now.getTime() - day.getTime()) / 60000 : null
   });
 
-  var dailyRows = [], attRows = [];
+  var dailyRows = [], attRows = [], byRoom = {};
   function t(min) { return min == null ? '' : atMin_(day, min); }
   r.persons.forEach(function (p) {
     var res = p.res;
     res.work.forEach(function (w) {
-      dailyRows.push([day, p.name, p.group, '작업', w.room, w.min, w.cost, s.rate, now]);
+      dailyRows.push([day, p.name, p.group, '작업', w.room, dur_(w.min), w.cost, s.rate, now]);
+      var g = byRoom[w.room] = byRoom[w.room] || { people: {}, min: 0, cost: 0 };
+      g.people[p.name] = true;
+      g.min += w.min;
+      g.cost += w.cost;
     });
     if (res.paidMin > 0) {
-      dailyRows.push([day, p.name, p.group, '유급휴가', '(' + p.type.name + ')', res.paidMin, res.paidCost, s.rate, now]);
+      dailyRows.push([day, p.name, p.group, '유급휴가', '(' + p.type.name + ')', dur_(res.paidMin), res.paidCost, s.rate, now]);
     }
     var note = [p.att.note].concat(p.notes).filter(String).join(' / ');
     attRows.push([
       day, p.name, p.group, p.type.name, res.verdict,
       p.type.working ? t(p.sched.start) : '', p.type.working ? t(p.sched.end) : '',
       t(res.actualStart), t(res.actualEnd),
-      res.workMin, res.paidMin, res.cost, note
+      dur_(res.workMin), dur_(res.paidMin), res.cost, note
     ]);
   });
 
-  replaceDateRows_(SH.DAILY, key, dailyRows, { 1: FMT.D, 6: FMT.N, 7: FMT.N, 8: FMT.N, 9: FMT.DT });
-  replaceDateRows_(SH.DAILY_ATT, key, attRows, { 1: FMT.D, 6: FMT.T, 7: FMT.T, 8: FMT.T, 9: FMT.T, 10: FMT.N, 11: FMT.N, 12: FMT.N });
-  return { daily: dailyRows.length, att: attRows.length, warnings: r.warnings };
+  // 일별방집계: 방 시트 정렬 순서 → 사용 해제된 방 → 미배치 (작업만, 유급휴가 제외)
+  var order = readRooms_().list.slice();
+  Object.keys(byRoom).forEach(function (room) {
+    if (order.indexOf(room) < 0 && room !== LOC.UNPLACED) order.push(room);
+  });
+  order.push(LOC.UNPLACED);
+  var roomRows = order.filter(function (room) { return byRoom[room]; }).map(function (room) {
+    var g = byRoom[room];
+    return [day, room, Object.keys(g.people).length, dur_(g.min), g.cost, now];
+  });
+
+  replaceDateRows_(SH.DAILY, key, dailyRows, { 1: FMT.D, 6: FMT.DUR, 7: FMT.N, 8: FMT.N, 9: FMT.DT });
+  replaceDateRows_(SH.DAILY_ATT, key, attRows, { 1: FMT.D, 6: FMT.T, 7: FMT.T, 8: FMT.T, 9: FMT.T, 10: FMT.DUR, 11: FMT.DUR, 12: FMT.N });
+  replaceDateRows_(SH.DAILY_ROOM, key, roomRows, { 1: FMT.D, 3: FMT.N, 4: FMT.DUR, 5: FMT.N, 6: FMT.DT });
+  return { daily: dailyRows.length, att: attRows.length, room: roomRows.length, warnings: r.warnings };
 }
 
 /** 시트에서 날짜 key 행을 모두 지우고 newRows로 교체 (다른 날짜는 유지, 날짜순 정렬) */
 function replaceDateRows_(name, key, newRows, fmts) {
-  var sh = sheet_(name);
+  var sh = ss_().getSheetByName(name);
+  if (!sh) { // 새로 추가된 집계 시트는 초기 설정을 다시 안 돌려도 자동 생성
+    sh = ss_().insertSheet(name);
+    sh.getRange(1, 1, 1, HEAD[name].length).setFontWeight('bold').setBackground('#e8eaed');
+    sh.setFrozenRows(1);
+  }
   var w = HEAD[name].length;
+  sh.getRange(1, 1, 1, w).setValues([HEAD[name]]); // 열 이름 변경(작업분→작업시간) 반영
   var last = sh.getLastRow();
   var keep = [];
+  var durCols = DUR_COLS[name] || [];
   if (last >= 2) {
     keep = sh.getRange(2, 1, last - 1, w).getValues().filter(function (r) {
       return toKey_(r[0]) !== key && r.join('') !== '';
+    });
+    // 예전 분 단위 숫자(예: 80) → 시간 값. 한 행의 시간이 24시간 이상일 수 없으므로 1 이상이면 분으로 본다
+    keep.forEach(function (r) {
+      durCols.forEach(function (c) {
+        if (typeof r[c - 1] === 'number' && r[c - 1] >= 1) r[c - 1] = dur_(r[c - 1]);
+      });
     });
   }
   var all = keep.concat(newRows)
