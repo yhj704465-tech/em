@@ -15,6 +15,7 @@ function onOpen() {
     .addSeparator()
     .addItem('🔑 PIN 설정', 'menuSetPin')
     .addItem('✅ 데이터 점검', 'menuCheckData')
+    .addItem('🕒 작업시간 표시 고치기', 'menuFixWorkTime')
     .addToUi();
 }
 
@@ -321,4 +322,43 @@ function menuCheckData() {
 function uniq_(arr) {
   var s = {};
   return arr.filter(function (x) { return s[x] ? false : (s[x] = true); });
+}
+
+// ───────────────────────── 작업시간 표시 고치기 ─────────────────────────
+
+/**
+ * 집계 시트에 예전 분 단위 숫자(예: 480 → "11520시간00분"으로 보임)가 남아 있으면
+ * 시간 값(480/1440 → "8시간00분")으로 바꾸고 표시형식·열 이름을 맞춘다. 여러 번 실행해도 안전.
+ */
+function menuFixWorkTime() {
+  var ss = ss_();
+  var targets = {};
+  targets[SH.DAILY] = { '작업분': '작업시간', '작업시간': '작업시간' };
+  targets[SH.DAILY_ATT] = { '작업분': '작업시간', '작업시간': '작업시간', '유급휴가분': '유급휴가시간', '유급휴가시간': '유급휴가시간' };
+  targets[SH.DAILY_ROOM] = { '작업시간': '작업시간' };
+  var lines = [];
+  Object.keys(targets).forEach(function (sheetName) {
+    var sh = ss.getSheetByName(sheetName);
+    if (!sh || sh.getLastColumn() < 1) { lines.push(sheetName + ': 시트 없음'); return; }
+    var head = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    var total = 0;
+    head.forEach(function (h, i) {
+      var newName = targets[sheetName][String(h).trim()];
+      if (!newName) return;
+      var col = i + 1;
+      sh.getRange(1, col).setValue(newName);
+      if (sh.getLastRow() >= 2) {
+        var rng = sh.getRange(2, col, sh.getLastRow() - 1, 1);
+        var vals = rng.getValues();
+        vals.forEach(function (r) {
+          var v = typeof r[0] === 'string' && r[0].trim() !== '' && !isNaN(r[0]) ? Number(r[0]) : r[0];
+          if (typeof v === 'number' && v >= 1) { r[0] = dur_(v); total++; }
+        });
+        rng.setValues(vals);
+      }
+      col_(sh, col).setNumberFormat(FMT.DUR);
+    });
+    lines.push(sheetName + ': ' + total + '칸 변환');
+  });
+  SpreadsheetApp.getUi().alert('작업시간 표시 고치기 완료', lines.join('\n'), SpreadsheetApp.getUi().ButtonSet.OK);
 }
